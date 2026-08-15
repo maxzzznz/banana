@@ -60,6 +60,7 @@ type apiResponse struct {
 type result struct {
 	OK             bool   `json:"ok"`
 	Output         string `json:"output"`
+	Format         string `json:"format"`
 	Model          string `json:"model"`
 	AspectRatio    string `json:"aspect_ratio,omitempty"`
 	InteractionID  string `json:"interaction_id,omitempty"`
@@ -89,7 +90,8 @@ func main() {
 	}
 	prompt := flag.String("prompt", "", "Prompt text (required)")
 	promptFile := flag.String("prompt-file", "", "Path to a UTF-8 prompt text file")
-	output := flag.String("output", "", "Output PNG path (required)")
+	output := flag.String("output", "", "Output image path (required)")
+	format := flag.String("format", "jpeg", "Output format: jpeg (default) or png")
 	ratio := flag.String("ratio", "", "Optional aspect ratio: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9")
 	input := flag.String("input", "", "Optional reference image path")
 	timeout := flag.Duration("timeout", 90*time.Second, "Total request timeout")
@@ -97,10 +99,17 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() != 0 || strings.TrimSpace(*output) == "" {
-		fail(errors.New("usage: banana [--prompt TEXT | --prompt-file FILE | stdin] --output FILE.png [--ratio RATIO] [--input IMAGE]"))
+		fail(errors.New("usage: banana [--prompt TEXT | --prompt-file FILE | stdin] --output FILE.jpg [--format FORMAT] [--ratio RATIO] [--input IMAGE]"))
 	}
 	if *ratio != "" && !allowedRatios[*ratio] {
 		fail(fmt.Errorf("unsupported ratio %q", *ratio))
+	}
+	mimeType, normalizedFormat, err := outputFormat(*format)
+	if err != nil {
+		fail(err)
+	}
+	if err := validateOutputExtension(*output, normalizedFormat); err != nil {
+		fail(err)
 	}
 	if *timeout <= 0 {
 		fail(errors.New("timeout must be positive"))
@@ -124,7 +133,7 @@ func main() {
 	}
 	body, err := json.Marshal(requestBody{
 		Model: model, Input: items,
-		ResponseFormat: imageFormat{Type: "image", MimeType: "image/png", AspectRatio: *ratio},
+		ResponseFormat: imageFormat{Type: "image", MimeType: mimeType, AspectRatio: *ratio},
 	})
 	if err != nil {
 		fail(fmt.Errorf("encode request: %w", err))
@@ -150,7 +159,35 @@ func main() {
 		fail(fmt.Errorf("write output: %w", err))
 	}
 
-	printJSON(result{OK: true, Output: *output, Model: model, AspectRatio: *ratio, InteractionID: response.ID, ReferenceImage: *input != ""})
+	printJSON(result{OK: true, Output: *output, Format: normalizedFormat, Model: model, AspectRatio: *ratio, InteractionID: response.ID, ReferenceImage: *input != ""})
+}
+
+func outputFormat(value string) (mimeType, normalized string, err error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "jpeg", "jpg":
+		return "image/jpeg", "jpeg", nil
+	case "png":
+		return "image/png", "png", nil
+	default:
+		return "", "", fmt.Errorf("unsupported format %q; use jpeg or png", value)
+	}
+}
+
+func validateOutputExtension(path, format string) error {
+	extension := strings.ToLower(filepath.Ext(path))
+	if extension == "" {
+		return errors.New("output path must use a .jpg, .jpeg, or .png extension")
+	}
+	validExtensions := map[string][]string{
+		"jpeg": {".jpg", ".jpeg"},
+		"png":  {".png"},
+	}
+	for _, expected := range validExtensions[format] {
+		if extension == expected {
+			return nil
+		}
+	}
+	return fmt.Errorf("output extension %q does not match --format %s", extension, format)
 }
 
 func printUsage(w io.Writer) {
@@ -163,14 +200,15 @@ Usage:
   banana [generation options]              Generate an image
 
 Generation:
-  banana --prompt TEXT --output FILE.png [--ratio RATIO] [--input IMAGE]
-  banana --prompt-file FILE --output FILE.png [--ratio RATIO] [--input IMAGE]
-  prompt-command | banana --output FILE.png [--ratio RATIO] [--input IMAGE]
+  banana --prompt TEXT --output FILE.jpg [--format FORMAT] [--ratio RATIO] [--input IMAGE]
+  banana --prompt-file FILE --output FILE.jpg [--format FORMAT] [--ratio RATIO] [--input IMAGE]
+  prompt-command | banana --output FILE.jpg [--format FORMAT] [--ratio RATIO] [--input IMAGE]
 
 Useful options:
   --prompt TEXT        Text prompt
   --prompt-file FILE   Read a prompt from a file
-  --output FILE.png    Destination image path (required)
+  --output FILE        Destination image path (required)
+  --format FORMAT      jpeg (default) or png
   --ratio RATIO        Optional aspect ratio, for example 16:9
   --input IMAGE        Optional reference image
   --timeout DURATION   Total request timeout (default: 90s)

@@ -54,25 +54,25 @@ Remove only the key saved by `configure`:
 ### Generate
 
 ```powershell
-.\bin\banana.exe --prompt "A small astronaut walking through a sunflower field" --ratio 16:9 --output outputs\astronaut.png
+.\bin\banana.exe --prompt "A small astronaut walking through a sunflower field" --ratio 16:9 --output outputs\astronaut.jpg
 ```
 
 For long or multiline prompts, use a file:
 
 ```powershell
-.\bin\banana.exe --prompt-file brief.txt --ratio 16:9 --output outputs\astronaut.png
+.\bin\banana.exe --prompt-file brief.txt --ratio 16:9 --output outputs\astronaut.jpg
 ```
 
 Or pipe the prompt through standard input. This is useful when an AI agent produces the prompt itself:
 
 ```powershell
-"A small astronaut walking through a sunflower field" | .\bin\banana.exe --ratio 16:9 --output outputs\astronaut.png
+"A small astronaut walking through a sunflower field" | .\bin\banana.exe --ratio 16:9 --output outputs\astronaut.jpg
 ```
 
 To use one optional reference image:
 
 ```powershell
-.\bin\banana.exe --prompt "Turn this into a watercolor illustration" --input reference.jpg --ratio 4:5 --output outputs\watercolor.png
+.\bin\banana.exe --prompt "Turn this into a watercolor illustration" --input reference.jpg --ratio 4:5 --output outputs\watercolor.jpg
 ```
 
 The command emits exactly one JSON object to standard output. Errors are also JSON and use a non-zero exit code, making the tool suitable for an AI agent.
@@ -80,7 +80,8 @@ The command emits exactly one JSON object to standard output. Errors are also JS
 ## Interface
 
 - exactly one prompt source: `--prompt`, `--prompt-file`, or piped standard input
-- `--output` required PNG destination
+- `--output` required image destination; its extension must match the selected format
+- `--format` optional output format: `jpeg` by default, or `png`
 - `--ratio` optional: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, or `21:9`
 - `--input` optional single reference image (maximum 20 MB)
 - `--timeout` optional total deadline; default: 90 seconds

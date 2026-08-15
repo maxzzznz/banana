@@ -7,7 +7,7 @@
 The command exits with code `0` on success and prints one JSON object to standard output:
 
 ```json
-{"ok":true,"output":"outputs/example.png","model":"gemini-3.1-flash-lite-image","aspect_ratio":"16:9","reference_image":false}
+{"ok":true,"output":"outputs/example.jpg","format":"jpeg","model":"gemini-3.1-flash-lite-image","aspect_ratio":"16:9","reference_image":false}
 ```
 
 On failure it exits non-zero and still prints one JSON object:
@@ -23,16 +23,18 @@ Do not parse human prose. Read `ok`, then use `output` when it is `true` or `err
 Use standard input for agent-generated prompts. It preserves newlines and avoids shell-quoting problems.
 
 ```text
-<prompt text> | banana --ratio 16:9 --output generated.png
+<prompt text> | banana --ratio 16:9 --output generated.jpg
 ```
 
 For a reference-driven request, add one local image path:
 
 ```text
-<prompt text> | banana --input source.png --ratio 4:5 --output generated.png
+<prompt text> | banana --input source.png --ratio 4:5 --output generated.jpg
 ```
 
 The tool accepts exactly one prompt source: `--prompt`, `--prompt-file`, or standard input. It accepts zero or one reference image.
+
+JPEG is the default output format. Pass `--format png` with a `.png` output path when lossless PNG output is needed. The CLI rejects mismatched output extensions so agents do not receive incorrectly named files.
 
 ## Credentials
 
