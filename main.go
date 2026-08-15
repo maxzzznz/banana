@@ -67,6 +67,10 @@ type result struct {
 }
 
 func main() {
+	if len(os.Args) == 1 {
+		printUsage(os.Stdout)
+		return
+	}
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "configure":
@@ -78,6 +82,9 @@ func main() {
 		case "logout":
 			logout()
 			return
+		case "help", "--help", "-h":
+			printUsage(os.Stdout)
+			return
 		}
 	}
 	prompt := flag.String("prompt", "", "Prompt text (required)")
@@ -86,6 +93,7 @@ func main() {
 	ratio := flag.String("ratio", "", "Optional aspect ratio: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9")
 	input := flag.String("input", "", "Optional reference image path")
 	timeout := flag.Duration("timeout", 90*time.Second, "Total request timeout")
+	flag.Usage = func() { printUsage(flag.CommandLine.Output()) }
 	flag.Parse()
 
 	if flag.NArg() != 0 || strings.TrimSpace(*output) == "" {
@@ -143,6 +151,32 @@ func main() {
 	}
 
 	printJSON(result{OK: true, Output: *output, Model: model, AspectRatio: *ratio, InteractionID: response.ID, ReferenceImage: *input != ""})
+}
+
+func printUsage(w io.Writer) {
+	fmt.Fprint(w, `banana — Generate images with Gemini Nano Banana 2 Lite
+
+Usage:
+  banana configure                         Save a Gemini API key locally
+  banana status                            Check whether a key is available
+  banana logout                            Remove the locally saved key
+  banana [generation options]              Generate an image
+
+Generation:
+  banana --prompt TEXT --output FILE.png [--ratio RATIO] [--input IMAGE]
+  banana --prompt-file FILE --output FILE.png [--ratio RATIO] [--input IMAGE]
+  prompt-command | banana --output FILE.png [--ratio RATIO] [--input IMAGE]
+
+Useful options:
+  --prompt TEXT        Text prompt
+  --prompt-file FILE   Read a prompt from a file
+  --output FILE.png    Destination image path (required)
+  --ratio RATIO        Optional aspect ratio, for example 16:9
+  --input IMAGE        Optional reference image
+  --timeout DURATION   Total request timeout (default: 90s)
+
+Run "banana status" to check configuration without revealing the API key.
+`)
 }
 
 func readPrompt(prompt, promptFile string) (string, error) {
