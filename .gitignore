@@ -1,6 +1,7 @@
 # Local executables
 nanobanana
 nanobanana.exe
+bin/
 
 # Generated images and temporary output
 outputs/*

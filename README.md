@@ -11,7 +11,7 @@ Small, dependency-free Go command-line tool for generating an image with Gemini 
 
 ```powershell
 $env:GEMINI_API_KEY = "your-key"
-go build -o nanobanana.exe .
+go build -o bin\\nanobanana.exe .
 ```
 
 For a different machine or operating system, cross-compile a single executable. Example for macOS on Apple Silicon:
