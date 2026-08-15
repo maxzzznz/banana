@@ -1,6 +1,6 @@
-# Using nanobanana from an AI agent
+# Using banana from an AI agent
 
-`nanobanana` is designed as a small command boundary: an agent supplies the creative inputs and receives a JSON result, while the executable reads its own Gemini API credential.
+`banana` is designed as a small command boundary: an agent supplies the creative inputs and receives a JSON result, while the executable reads its own Gemini API credential.
 
 ## Contract
 
@@ -23,13 +23,13 @@ Do not parse human prose. Read `ok`, then use `output` when it is `true` or `err
 Use standard input for agent-generated prompts. It preserves newlines and avoids shell-quoting problems.
 
 ```text
-<prompt text> | nanobanana --ratio 16:9 --output generated.png
+<prompt text> | banana --ratio 16:9 --output generated.png
 ```
 
 For a reference-driven request, add one local image path:
 
 ```text
-<prompt text> | nanobanana --input source.png --ratio 4:5 --output generated.png
+<prompt text> | banana --input source.png --ratio 4:5 --output generated.png
 ```
 
 The tool accepts exactly one prompt source: `--prompt`, `--prompt-file`, or standard input. It accepts zero or one reference image.
@@ -39,12 +39,14 @@ The tool accepts exactly one prompt source: `--prompt`, `--prompt-file`, or stan
 An agent should not be given an API key in its prompt, command arguments, or standard input. Configure the executable once in the user environment with:
 
 ```text
-nanobanana configure
+banana configure
 ```
 
 For unattended deployment, the hosting environment may provide `GEMINI_API_KEY`. The executable does not print the key.
 
 This protects the key from normal tool inputs and logs. It is not a security boundary against an agent that can freely read every file or execute arbitrary commands as the same operating-system user.
+
+Use `banana status` to confirm whether a usable key is available. The JSON result never includes the key itself. Use `banana logout` to remove only the locally saved key; it does not alter a `GEMINI_API_KEY` supplied by the runtime environment.
 
 ## Retry behavior
 

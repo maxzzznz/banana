@@ -30,3 +30,7 @@ The implementation uses only the Go standard library and calls the Gemini Intera
 If additional Gemini image models are introduced, add an explicit model registry before exposing `--model` and `--size`. Each registry entry should define supported ratios, allowed output sizes, and reference-image limits. That prevents the CLI from accepting a valid-looking combination that a chosen model cannot serve.
 
 Avoid changing the JSON result fields incompatibly; agents benefit from a stable machine-readable contract.
+
+## Credential behavior
+
+The initial configuration is a plaintext local file by design, protected by operating-system file permissions. On Linux servers, run Banana under a dedicated service account and keep the file in that account's XDG configuration directory, normally `~/.config/banana/config.json`. For a system service, `XDG_CONFIG_HOME` can instead point to a private persistent directory such as `/var/lib/banana/.config` owned by that service account.
