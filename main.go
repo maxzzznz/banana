@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	model       = "gemini-3.1-flash-lite-image"
-	endpoint    = "https://generativelanguage.googleapis.com/v1beta/interactions"
-	maxAttempts = 4
+	model            = "gemini-3.1-flash-lite-image"
+	endpoint         = "https://generativelanguage.googleapis.com/v1beta/interactions"
+	maxAttempts      = 4
+	maxResponseBytes = 25 * 1024 * 1024
 )
 
 var allowedRatios = map[string]bool{
@@ -48,13 +49,19 @@ type requestBody struct {
 }
 
 type apiImage struct {
+	Type     string `json:"type"`
 	Data     string `json:"data"`
 	MimeType string `json:"mime_type"`
+}
+
+type apiStep struct {
+	Content []apiImage `json:"content"`
 }
 
 type apiResponse struct {
 	ID          string    `json:"id"`
 	OutputImage *apiImage `json:"output_image"`
+	Steps       []apiStep `json:"steps"`
 }
 
 type result struct {
@@ -145,10 +152,11 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	if response.OutputImage == nil || response.OutputImage.Data == "" {
+	image := response.generatedImage()
+	if image == nil || image.Data == "" {
 		fail(errors.New("Gemini returned no generated image"))
 	}
-	data, err := base64.StdEncoding.DecodeString(response.OutputImage.Data)
+	data, err := base64.StdEncoding.DecodeString(image.Data)
 	if err != nil {
 		fail(fmt.Errorf("decode generated image: %w", err))
 	}
@@ -160,6 +168,24 @@ func main() {
 	}
 
 	printJSON(result{OK: true, Output: *output, Format: normalizedFormat, Model: model, AspectRatio: *ratio, InteractionID: response.ID, ReferenceImage: *input != ""})
+}
+
+// generatedImage handles both the output_image convenience field and the
+// canonical REST representation, where image blocks are nested in steps.
+func (response *apiResponse) generatedImage() *apiImage {
+	if response.OutputImage != nil && response.OutputImage.Data != "" {
+		return response.OutputImage
+	}
+	for stepIndex := len(response.Steps) - 1; stepIndex >= 0; stepIndex-- {
+		content := response.Steps[stepIndex].Content
+		for contentIndex := len(content) - 1; contentIndex >= 0; contentIndex-- {
+			item := &content[contentIndex]
+			if item.Type == "image" && item.Data != "" {
+				return item
+			}
+		}
+	}
+	return nil
 }
 
 func outputFormat(value string) (mimeType, normalized string, err error) {
@@ -402,10 +428,13 @@ func callGemini(ctx context.Context, key string, body []byte) (*apiResponse, err
 		if err != nil {
 			lastErr = fmt.Errorf("Gemini request: %w", err)
 		} else {
-			payload, readErr := io.ReadAll(io.LimitReader(resp.Body, 2*1024*1024))
+			payload, readErr := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 			resp.Body.Close()
 			if readErr != nil {
 				return nil, fmt.Errorf("read Gemini response: %w", readErr)
+			}
+			if len(payload) > maxResponseBytes {
+				return nil, fmt.Errorf("Gemini response exceeds the %d MB safety limit", maxResponseBytes/(1024*1024))
 			}
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 				var parsed apiResponse

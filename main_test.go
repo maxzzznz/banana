@@ -53,3 +53,22 @@ func TestValidateOutputExtension(t *testing.T) {
 		}
 	}
 }
+
+func TestGeneratedImage(t *testing.T) {
+	convenience := &apiResponse{OutputImage: &apiImage{Type: "image", Data: "convenience"}}
+	if image := convenience.generatedImage(); image == nil || image.Data != "convenience" {
+		t.Fatal("expected the output_image convenience field to be used")
+	}
+
+	steps := &apiResponse{Steps: []apiStep{
+		{Content: []apiImage{{Type: "text"}, {Type: "image", Data: "first"}}},
+		{Content: []apiImage{{Type: "image", Data: "last"}}},
+	}}
+	if image := steps.generatedImage(); image == nil || image.Data != "last" {
+		t.Fatal("expected the last image from the REST steps response")
+	}
+
+	if image := (&apiResponse{}).generatedImage(); image != nil {
+		t.Fatal("expected no image for an empty response")
+	}
+}
